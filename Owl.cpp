@@ -17,6 +17,8 @@ vex::sonar mainSonar(Brain.ThreeWirePort.A);
 vex::line leftLight(Brain.ThreeWirePort.E);
 vex::line rightLight(Brain.ThreeWirePort.D);
 //#endregion config_globals
+float min_dis = 5.0;
+float max_dis = 20.0;
 const double kC = 2048.0;
 const double pC = 1.8;
 const double kP = 85;
@@ -46,10 +48,16 @@ void goToGoal(){
 }
 
 bool noStopSign(){
-    //return true is noStopSign
-    //false if 5-20inches from stopSign
+    float sensorValue = mainSonar.distance(distanceUnits::in);
+
+   if((max_dis > sensorValue) and (min_dis < sensorValue))
+   {
+       return false;
+   }
+   else{ //outside 5-20in
+       return true;
+   }
 }
-bool noStopLine(){
     //return true is no stop line
     //false if on stop line
 }
