@@ -13,10 +13,24 @@ vex::vision            visonMain(vex::PORT12);
 vex::limit             limitMain(Brain.ThreeWirePort.F);
 vex::vision::signature sig_STOP_SIGN(1,10219,10813,10516,-1111,-803,-957,3,0);
 vex::vision::signature sig_TARGET(2,553,883,718,-4005,-3753,-3879,3,0);
+vex::sonar mainSonar(Brain.ThreeWirePort.A);
+vex::line leftLight(Brain.ThreeWirePort.E);
+vex::line rightLight(Brain.ThreeWirePort.D);
 //#endregion config_globals
+const double kC = 2048.0;
+const double pC = 1.8;
+const double kP = 85;
+const double kI = 0.03*(2*kP/pC);
+const double kD = (0.185*kP*pC);
+const double target = 45;
+const int leftThresh = 1550;
+const int rightThresh = 2075;
+const double timeConst = 0.1;
+double e;
 
 void pickUp(){
     //reset arm rotaion after clicking limit switch
+	vex::limit.pressing();
     //move to pickup angle
     //move back
     //move arm up
