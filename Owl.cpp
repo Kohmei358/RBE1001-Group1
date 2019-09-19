@@ -26,14 +26,70 @@ const double target = 45;
 const int leftThresh = 1550;
 const int rightThresh = 2075;
 const double timeConst = 0.1;
+const double collectWasteAngle = 125.31;
+const int resetAngle = 73;
+const double travellingAngle = collectWasteAngle - (resetAngle + 90);
+const int wheelRad = 2;
 double e;
 
 void pickUp(){
+    bool lastPressed = limitMain.pressing();
+	//reset arm rotaion
+	while(!lastPressed){
+		motorArm.spin(directionType::rev, 5, voltageUnits::volt);
+		lastPressed = limitMain.pressing();
+	}
+		if(limitMain.pressing())
+	{
+	motorArm.resetRotation();
+	motorArm.rotateTo(resetAngle*5, rotationUnits::deg, 50, velocityUnits::pct);
+	}
     //reset arm rotaion after clicking limit switch
-	vex::limit.pressing();
     //move to pickup angle
+	motorArm.rotateTo(collectWasteAngle*5, rotationUnits::deg, 50, velocityUnits::pct);
     //move back
+	move(-2);
     //move arm up
+	motorArm.rotateTo(10, rotationUnits::deg, 50, velocityUnits::pct);
+}
+void driveAtSpeed(double speed){
+    motorLeft.spin(directionType::fwd, speed, voltageUnits::volt);
+    motorRight.spin(directionType::fwd, speed, voltageUnits::volt);
+}
+
+double map(double darkVolts,double lightVolts , double darkPct, double lightPct, double pct){
+    double temp = ((((pct - darkPct)*(lightVolts - darkVolts))/(lightPct - darkPct)) + darkVolts);
+    return temp;
+}
+void lineTrack(){
+Brain.Timer.clear();
+    double intergral = 0;
+    double prevError = 0;
+    double error = 0;
+    double steering = 0;
+    while(true){
+        if(Brain.Timer.time(timeUnits::sec) > 3){
+            Brain.Timer.clear();
+            intergral = 0;
+        }        
+        error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
+        error = error*0.1;
+        Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
+        Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
+        
+        intergral += error * timeConst;
+        double derivative = (error-prevError)/timeConst;
+        steering = kP*error + kI*intergral + kD*derivative;
+        prevError = error;
+        sleepMs(10);
+        if(steering > 0){
+            motorLeft.spin(directionType::rev,2.6+steering,voltageUnits::volt);
+            motorRight.spin(directionType::rev,2.6-(0.8*steering),voltageUnits::volt);
+        }else{
+            motorLeft.spin(directionType::rev,2.6+(0.8*steering),voltageUnits::volt);
+            motorRight.spin(directionType::rev,2.6-steering,voltageUnits::volt);
+	}
+    }
 }
 void dropOff(){
     //90 deg point turn
@@ -61,73 +117,10 @@ int main(void) {
 	visonMain.setSignature(sig_TARGET);
 	//#endregion config_init
 	pickUp();
-	while(noStopSign()){
-	    //line track
-	}
-	while(noStopLine()){
-	    //line track
+	turn(180);
+	while(noStopSign() && noStopLine){
+	    lineTrack();
 	}
 	dropOff();				
     goToGoal();
 }
-
-    
-    // motorLeft.spin(fwd,30,percentUnits::pct);
-    // motorRight.spin(fwd,-30,percentUnits::pct);
-    // sleepMs(1000);
-    // motorLeft.stop();
-    // motorRight.stop();
-    // sleepMs(1000);
-    // motorArm.startRotateFor(-100,rotationUnits::deg);
-    // motorLeft.spin(fwd,30,percentUnits::pct);
-    // motorRight.spin(fwd,30,percentUnits::pct);
-    // sleepMs(300);
-    // motorLeft.stop();
-    // motorRight.stop();
-    // sleepMs(1000);
-    // while(centerX-190 > 5 || centerX-190 < -5){
-    //     if(centerX-190 < 5){
-    //         motorLeft.spin(fwd,1.5,voltageUnits::volt);
-    //         motorRight.spin(fwd,-1.5,voltageUnits::volt);
-    //     }
-    //     else if(centerX-190 > -5){
-    //         motorLeft.spin(fwd,-1.5,voltageUnits::volt);
-    //         motorRight.spin(fwd,1.5,voltageUnits::volt);
-    //     }
-    //     visonMain.takeSnapshot(sig_TARGET);
-    //     centerX = visonMain.largestObject.centerX;
-    //     Brain.Screen.printLine(1,"x: %d, y:%d\n", visonMain.largestObject.centerX, visonMain.largestObject.centerY);
-    // }
-    // motorLeft.stop();
-    // motorRight.stop();
-    // sleepMs(1000);
-    // motorLeft.spin(fwd,3,voltageUnits::volt);
-    // motorRight.spin(fwd,3,voltageUnits::volt);
-    // sleepMs(1700);
-    // motorLeft.stop();
-    // motorRight.stop();
-    // while(centerX-134 > 5 || centerX-134 < -5){
-    //     if(centerX-134 < 5){
-    //         motorLeft.spin(fwd,1.0,voltageUnits::volt);
-    //         motorRight.spin(fwd,-1.0,voltageUnits::volt);
-    //     }
-    //     else if(centerX-134 > -5){
-    //         motorLeft.spin(fwd,-1.0,voltageUnits::volt);
-    //         motorRight.spin(fwd,1.0,voltageUnits::volt);
-    //     }
-    //     visonMain.takeSnapshot(sig_TARGET);
-    //     centerX = visonMain.largestObject.centerX;
-    //     Brain.Screen.printLine(1,"x: %d, y:%d\n", visonMain.largestObject.centerX, visonMain.largestObject.centerY);
-    // }
-    // motorLeft.stop();
-    // motorRight.stop();
-    // motorLeft.spin(fwd,5,voltageUnits::volt);
-    // motorRight.spin(fwd,5,voltageUnits::volt);
-    // sleepMs(300);
-    // motorLeft.stop(brakeType::hold);
-    // motorRight.stop(brakeType::hold);
-    // while(true){
-    //     visonMain.takeSnapshot(sig_TARGET);
-    //     centerX = visonMain.largestObject.centerX;
-    //     Brain.Screen.printLine(1,"x: %d, y:%d\n", visonMain.largestObject.centerX, visonMain.largestObject.centerY);
-    // }
