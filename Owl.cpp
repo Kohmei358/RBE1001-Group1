@@ -38,7 +38,7 @@ double intergral = 0;
 double prevError = 0;
 double error = 0;
 double steering = 0;
-
+const int light_threshold = 50;
 
 double degToRad(double deg){
     return (deg*2*3.14)/360;
@@ -76,7 +76,7 @@ void pickUp(){
 	moveForwards(20, backupdist);
 	sleepMs(350);
     //move arm up
-	motorArm.rotateTo(-800, rotationUnits::deg, 50, velocityUnits::pct);
+	motorArm.rotateTo(-250, rotationUnits::deg, 50, velocityUnits::pct);
 }
 void driveAtSpeed(double speed){
     motorLeft.spin(directionType::fwd, speed, voltageUnits::volt);
@@ -178,7 +178,7 @@ bool noStopLine(){
 }
 int main(void) {
 	pickUp();
- 	turnLeft(25, -180*2.7);
+ 	turnLeft(25, -180*2.8);
  	moveForwards(20, backupdist);
  	//line track
 	while(noStopSign() /*&& noStopLine()*/){
