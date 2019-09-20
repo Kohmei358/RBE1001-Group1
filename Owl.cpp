@@ -6,8 +6,6 @@ using namespace vex;
 const double kP = 0.001;
 const double kI = 0.01;
 
-
-//#region config_globals
 vex::brain  Brain;
 vex::motor  motorLeft(vex::PORT1, vex::gearSetting::ratio18_1, true);
 vex::motor  motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false);
@@ -17,7 +15,7 @@ vex::sonar  mainSonar(Brain.ThreeWirePort.A);
 vex::line   rightLight(Brain.ThreeWirePort.D);
 vex::line   leftLight(Brain.ThreeWirePort.E);
 vex::bumper limitMain(Brain.ThreeWirePort.F);
-//#endregion config_globals
+
 vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
 float min_dis = 5.0;
 float max_dis = 20.0;
@@ -32,8 +30,9 @@ const int rightThresh = 2075;
 const double timeConst = 0.1;
 const int wheelRad = 2;
 double e;
-const int resetAngle = -930;
-const int backupdist = -80;
+const int resetAngle = -960;
+const int backupdist = -90;
+
 
 
 double degToRad(double deg){
@@ -179,9 +178,11 @@ bool noStopLine(){
 
 int main(void) {
 	
-	pickUp();
- 	turnLeft(25, -180*2.7);
- 	moveForwards(20, backupdist);
+// 	pickUp();
+// 	sleepMs(500);
+//  	turnLeft(15, -180*2.81);
+//  	sleepMs(500);
+//  	moveForwards(20, -400);
 	while(noStopSign() /*&& noStopLine()*/){
 	    lineTrack();
 	}
