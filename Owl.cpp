@@ -28,6 +28,7 @@ const double target = 45;
 const int leftThresh = 1550;
 const int rightThresh = 2075;
 const double timeConst = 0.1;
+const int light_threshold = 50;
 const int wheelRad = 2;
 double e;
 const int resetAngle = -960;
@@ -161,19 +162,25 @@ void goToGoal(){
 }
 
 bool noStopSign(){
-    float sensorValue = mainSonar.distance(distanceUnits::in);
-
-   if((max_dis > sensorValue) and (min_dis < sensorValue))
-   {
-       return false;
-   }
-   else{ //outside 5-20in
-       return true;
-   }
+	float sensorValue = mainSonar.distance(distanceUnits::in);
+ 	if((max_dis > sensorValue) and (min_dis < sensorValue))// and ((targetArea + range) > area) and ((targetArea - range) < area)))
+	{
+		return false;
+	 }
+	 else{ //outside 5-20in
+	 	return true;
+	 }
 }
 bool noStopLine(){
-    //return true is no stop line
-    //false if on stop line
+    int Lreading = leftLight.value(percentUnits::pct);
+    int Rreading = rightLight.value(percentUnits::pct);
+    if((Lreading < light_threshold) and (Rreading < light_threshold)){
+        return true;
+    }
+    else{
+        return false;
+    }
+}
 }
 
 int main(void) {
