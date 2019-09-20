@@ -6,6 +6,7 @@ using namespace vex;
 const double kP = 0.001;
 const double kI = 0.01;
 
+//#region config_globals
 vex::brain  Brain;
 vex::motor  motorLeft(vex::PORT1, vex::gearSetting::ratio18_1, true);
 vex::motor  motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false);
@@ -15,7 +16,7 @@ vex::sonar  mainSonar(Brain.ThreeWirePort.A);
 vex::line   rightLight(Brain.ThreeWirePort.D);
 vex::line   leftLight(Brain.ThreeWirePort.E);
 vex::bumper limitMain(Brain.ThreeWirePort.F);
-
+//#endregion config_globals
 vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
 float min_dis = 5.0;
 float max_dis = 20.0;
@@ -28,13 +29,12 @@ const double target = 45;
 const int leftThresh = 1550;
 const int rightThresh = 2075;
 const double timeConst = 0.1;
+
 const int light_threshold = 50;
 const int wheelRad = 2;
 double e;
 const int resetAngle = -960;
 const int backupdist = -90;
-
-
 
 double degToRad(double deg){
     return (deg*2*3.14)/360;
@@ -83,35 +83,12 @@ double map(double darkVolts,double lightVolts , double darkPct, double lightPct,
     double temp = ((((pct - darkPct)*(lightVolts - darkVolts))/(lightPct - darkPct)) + darkVolts);
     return temp;
 }
-void lineTrack(){
+void lineTrackSet(){
 Brain.Timer.clear();
     double intergral = 0;
     double prevError = 0;
     double error = 0;
     double steering = 0;
-    while(true){
-        if(Brain.Timer.time(timeUnits::sec) > 3){
-            Brain.Timer.clear();
-            intergral = 0;
-        }        
-        error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
-        error = error*0.1;
-        Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
-        Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
-        
-        intergral += error * timeConst;
-        double derivative = (error-prevError)/timeConst;
-        steering = kP*error + kI*intergral + kD*derivative;
-        prevError = error;
-        sleepMs(10);
-        if(steering > 0){
-            motorLeft.spin(directionType::rev,2.6+steering,voltageUnits::volt);
-            motorRight.spin(directionType::rev,2.6-(0.8*steering),voltageUnits::volt);
-        }else{
-            motorLeft.spin(directionType::rev,2.6+(0.8*steering),voltageUnits::volt);
-            motorRight.spin(directionType::rev,2.6-steering,voltageUnits::volt);
-	}
-    }
 }
 void dropOff(){
     //90 deg point turn
@@ -162,6 +139,7 @@ void goToGoal(){
 }
 
 bool noStopSign(){
+
 	float sensorValue = mainSonar.distance(distanceUnits::in);
  	if((max_dis > sensorValue) and (min_dis < sensorValue))// and ((targetArea + range) > area) and ((targetArea - range) < area)))
 	{
@@ -185,14 +163,33 @@ bool noStopLine(){
 
 int main(void) {
 	
-// 	pickUp();
-// 	sleepMs(500);
-//  	turnLeft(15, -180*2.81);
-//  	sleepMs(500);
-//  	moveForwards(20, -400);
+
+	pickUp();
+ 	turnLeft(25, -180*2.7);
+ 	moveForwards(20, backupdist);
+ 	//line track
 	while(noStopSign() /*&& noStopLine()*/){
-	    lineTrack();
-	}
+	    lineTrackSet();
+        if(Brain.Timer.time(timeUnits::sec) > 3){
+            Brain.Timer.clear();
+            intergral = 0;
+        }        
+        error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
+        error = error*0.1;
+        Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
+        Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
+        
+        intergral += error * timeConst;
+        double derivative = (error-prevError)/timeConst;
+        steering = kP*error + kI*intergral + kD*derivative;
+        prevError = error;
+        sleepMs(10);
+        abs(steering){
+            motorLeft.spin(directionType::rev,2.6+steering,voltageUnits::volt);
+            motorRight.spin(directionType::rev,2.6-(0.8*steering),voltageUnits::volt);
+        }
+    }
+
 // 	dropOff();				
 
 //     goToGoal();
