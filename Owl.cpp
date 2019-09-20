@@ -34,6 +34,10 @@ const int wheelRad = 2;
 double e;
 const int resetAngle = -930;
 const int backupdist = -80;
+double intergral = 0;
+double prevError = 0;
+double error = 0;
+double steering = 0;
 
 
 double degToRad(double deg){
@@ -84,7 +88,25 @@ double map(double darkVolts,double lightVolts , double darkPct, double lightPct,
     return temp;
 }
 
-
+void lineTrack(){
+    if(Brain.Timer.time(timeUnits::sec) > 3){
+            Brain.Timer.clear();
+            intergral = 0;
+        }        
+        error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
+        error = error*0.1;
+        Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
+        Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
+        
+        intergral += error * timeConst;
+        double derivative = (error-prevError)/timeConst;
+        steering = kP*error + kI*intergral + kD*derivative;
+        prevError = error;
+        sleepMs(10);
+        abs(steering);
+            motorLeft.spin(directionType::rev,2.6+steering,voltageUnits::volt);
+            motorRight.spin(directionType::rev,2.6-(0.8*steering),voltageUnits::volt);
+}
 void dropOff(){
     //90 deg point turn
     //move arm down
@@ -150,34 +172,12 @@ bool noStopLine(){
 }
 
 int main(void) {
-	
 	pickUp();
  	turnLeft(25, -180*2.7);
  	moveForwards(20, backupdist);
  	//line track
 	while(noStopSign() /*&& noStopLine()*/){
-	    Brain.Timer.clear();
-    double intergral = 0;
-    double prevError = 0;
-    double error = 0;
-    double steering = 0;
-        if(Brain.Timer.time(timeUnits::sec) > 3){
-            Brain.Timer.clear();
-            intergral = 0;
-        }        
-        error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
-        error = error*0.1;
-        Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
-        Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
-        
-        intergral += error * timeConst;
-        double derivative = (error-prevError)/timeConst;
-        steering = kP*error + kI*intergral + kD*derivative;
-        prevError = error;
-        sleepMs(10);
-        abs(steering);
-            motorLeft.spin(directionType::rev,2.6+steering,voltageUnits::volt);
-            motorRight.spin(directionType::rev,2.6-(0.8*steering),voltageUnits::volt);
+        lineTrack();
     }
 // 	dropOff();				
 
