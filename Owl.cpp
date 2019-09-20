@@ -16,6 +16,22 @@ vex::vision            visionMain(vex::PORT12);
 vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
 //#endregion config_globals
 
+const double kC = 2048.0;
+const double pC = 1.8;
+const double kP = 85;
+const double kI = 0.03*(2*kP/pC);
+const double kD = (0.185*kP*pC);
+const double target = 45;
+const int leftThresh = 1550;
+const int rightThresh = 2075;
+const double timeConst = 0.1;
+const double collectWasteAngle = 125.31;
+const int resetAngle = 73;
+const double travellingAngle = collectWasteAngle - (resetAngle + 90);
+const int wheelRad = 2;
+double e;
+
+
 double degToRad(double deg){
     return (deg*2*3.14)/360;
 }
@@ -38,10 +54,63 @@ void turnLeft(int power, int distance){
 }
 
 void pickUp(){
+    bool lastPressed = limitMain.pressing();
+	//reset arm rotaion
+	while(!lastPressed){
+		motorArm.spin(directionType::rev, 5, voltageUnits::volt);
+		lastPressed = limitMain.pressing();
+	}
+		if(limitMain.pressing())
+	{
+	motorArm.resetRotation();
+	motorArm.rotateTo(resetAngle*5, rotationUnits::deg, 50, velocityUnits::pct);
+	}
     //reset arm rotaion after clicking limit switch
     //move to pickup angle
+	motorArm.rotateTo(collectWasteAngle*5, rotationUnits::deg, 50, velocityUnits::pct);
     //move back
+	move(-2);
     //move arm up
+	motorArm.rotateTo(10, rotationUnits::deg, 50, velocityUnits::pct);
+}
+void driveAtSpeed(double speed){
+    motorLeft.spin(directionType::fwd, speed, voltageUnits::volt);
+    motorRight.spin(directionType::fwd, speed, voltageUnits::volt);
+}
+
+double map(double darkVolts,double lightVolts , double darkPct, double lightPct, double pct){
+    double temp = ((((pct - darkPct)*(lightVolts - darkVolts))/(lightPct - darkPct)) + darkVolts);
+    return temp;
+}
+void lineTrack(){
+Brain.Timer.clear();
+    double intergral = 0;
+    double prevError = 0;
+    double error = 0;
+    double steering = 0;
+    while(true){
+        if(Brain.Timer.time(timeUnits::sec) > 3){
+            Brain.Timer.clear();
+            intergral = 0;
+        }        
+        error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
+        error = error*0.1;
+        Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
+        Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
+        
+        intergral += error * timeConst;
+        double derivative = (error-prevError)/timeConst;
+        steering = kP*error + kI*intergral + kD*derivative;
+        prevError = error;
+        sleepMs(10);
+        if(steering > 0){
+            motorLeft.spin(directionType::rev,2.6+steering,voltageUnits::volt);
+            motorRight.spin(directionType::rev,2.6-(0.8*steering),voltageUnits::volt);
+        }else{
+            motorLeft.spin(directionType::rev,2.6+(0.8*steering),voltageUnits::volt);
+            motorRight.spin(directionType::rev,2.6-steering,voltageUnits::volt);
+	}
+    }
 }
 void dropOff(){
     //90 deg point turn
@@ -105,14 +174,13 @@ int main(void) {
 	visionMain.setBrightness(55);
 	visionMain.setSignature(sig_TARGET);
 	//#endregion config_init
-							
-		// 	pickUp();
-// 	while(noStopSign()){
-// 	    //line track
-// 	}
-// 	while(noStopLine()){
-// 	    //line track
-// 	}
-// 	dropOff();				
+
+	pickUp();
+	turn(180);
+	while(noStopSign() && noStopLine){
+	    lineTrack();
+	}
+	dropOff();				
+
     goToGoal();
 }
