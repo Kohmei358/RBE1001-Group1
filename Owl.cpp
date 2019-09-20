@@ -3,8 +3,8 @@
 #include "math.h"
 using namespace vex;
 
-const double kP = 0.001;
-const double kI = 0.01;
+const double kP = 5;
+const double kI = 0;
 
 
 //#region config_globals
@@ -94,7 +94,7 @@ void lineTrack(){
             intergral = 0;
         }        
         error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
-        error = error*0.1;
+        //error = error*0.1;
         Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
         Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
         
@@ -103,9 +103,8 @@ void lineTrack(){
         steering = kP*error + kI*intergral + kD*derivative;
         prevError = error;
         sleepMs(10);
-        abs(steering);
-            motorLeft.spin(directionType::rev,2.6+steering,voltageUnits::volt);
-            motorRight.spin(directionType::rev,2.6-(0.8*steering),voltageUnits::volt);
+        motorLeft.spin(directionType::rev,2.4+steering,voltageUnits::volt);
+        motorRight.spin(directionType::rev,2.4-steering,voltageUnits::volt);
 }
 void dropOff(){
     //90 deg point turn
@@ -167,23 +166,25 @@ bool noStopSign(){
    }
 }
 bool noStopLine(){
-    int Lreading = leftLight.value(percentUnits::pct);
-    int Rreading = rightLight.value(percentUnits::pct);
-    if((Lreading > light_threshold) and (Rreading > light_threshold)){
-        return false;
-    }
-    else{
-        return true;
-    }
+    //return true is no stop line
+    //false if on stop line
 }
+
 int main(void) {
-	pickUp();
- 	turnLeft(25, -180*2.7);
- 	moveForwards(20, backupdist);
+// 	pickUp();
+//  	turnLeft(25, -180*2.7);
+//  	moveForwards(20, backupdist);
  	//line track
-	while(noStopSign() /*&& noStopLine()*/){
+	while(noStopSign() && noStopLine()){
         lineTrack();
     }
+    stop();
+    while(!noStopSign){
+    }
+    while(noStopLine){
+        lineTrack();
+    }
+    
 // 	dropOff();				
 
 //     goToGoal();
