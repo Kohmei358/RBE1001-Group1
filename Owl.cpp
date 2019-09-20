@@ -14,6 +14,7 @@ vex::motor             motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false
 vex::motor             motorArm(vex::PORT8, vex::gearSetting::ratio18_1, false);
 vex::vision            visionMain(vex::PORT12);
 vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
+vex::limit		limitMain(vex::PORT F);
 //#endregion config_globals
 float min_dis = 5.0;
 float max_dis = 20.0;
