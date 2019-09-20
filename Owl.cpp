@@ -8,14 +8,17 @@ const double kI = 0.01;
 
 
 //#region config_globals
-vex::brain             Brain;
-vex::motor             motorLeft(vex::PORT1, vex::gearSetting::ratio18_1, true);
-vex::motor             motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false);
-vex::motor             motorArm(vex::PORT8, vex::gearSetting::ratio18_1, false);
-vex::vision            visionMain(vex::PORT12);
-vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
-vex::limit		limitMain(vex::PORT F);
+vex::brain  Brain;
+vex::motor  motorLeft(vex::PORT1, vex::gearSetting::ratio18_1, true);
+vex::motor  motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false);
+vex::motor  motorArm(vex::PORT8, vex::gearSetting::ratio18_1, false);
+vex::vision visionMain(vex::PORT12);
+vex::sonar  mainSonar(Brain.ThreeWirePort.A);
+vex::line   rightLight(Brain.ThreeWirePort.D);
+vex::line   leftLight(Brain.ThreeWirePort.E);
+vex::bumper limitMain(Brain.ThreeWirePort.F);
 //#endregion config_globals
+vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
 float min_dis = 5.0;
 float max_dis = 20.0;
 const double kC = 2048.0;
@@ -27,11 +30,10 @@ const double target = 45;
 const int leftThresh = 1550;
 const int rightThresh = 2075;
 const double timeConst = 0.1;
-const double collectWasteAngle = 125.31;
-const int resetAngle = 73;
-const double travellingAngle = collectWasteAngle - (resetAngle + 90);
 const int wheelRad = 2;
 double e;
+const int resetAngle = -930;
+const int backupdist = -80;
 
 
 double degToRad(double deg){
@@ -39,8 +41,8 @@ double degToRad(double deg){
 }
 
 void stop(){
-    motorLeft.stop(brakeType::hold);
-    motorRight.stop(brakeType::hold);
+    motorLeft.stop(brakeType::brake);
+    motorRight.stop(brakeType::brake);
 }
 
 void moveForwards(int power, int distance){
@@ -56,24 +58,21 @@ void turnLeft(int power, int distance){
 }
 
 void pickUp(){
-    bool lastPressed = limitMain.pressing();
 	//reset arm rotaion
-	while(!lastPressed){
-		motorArm.spin(directionType::rev, 5, voltageUnits::volt);
-		lastPressed = limitMain.pressing();
+	motorArm.spin(directionType::fwd, 12, voltageUnits::volt);
+	while(!limitMain.pressing()){
+	    Brain.Screen.printLine(1,"Wait for btn");
 	}
-		if(limitMain.pressing())
-	{
-	motorArm.resetRotation();
-	motorArm.rotateTo(resetAngle*5, rotationUnits::deg, 50, velocityUnits::pct);
-	}
-    //reset arm rotaion after clicking limit switch
+	Brain.Screen.clearScreen();
+    //reset arm rotation after clicking limit switch
     //move to pickup angle
-	motorArm.rotateTo(collectWasteAngle*5, rotationUnits::deg, 50, velocityUnits::pct);
-    //move back
-	move(-2);
+    motorArm.resetRotation();
+	motorArm.rotateTo(resetAngle, rotationUnits::deg, 100, velocityUnits::pct);
+    sleepMs(350);
+	moveForwards(20, backupdist);
+	sleepMs(350);
     //move arm up
-	motorArm.rotateTo(10, rotationUnits::deg, 50, velocityUnits::pct);
+	motorArm.rotateTo(-800, rotationUnits::deg, 50, velocityUnits::pct);
 }
 void driveAtSpeed(double speed){
     motorLeft.spin(directionType::fwd, speed, voltageUnits::volt);
@@ -173,22 +172,20 @@ bool noStopSign(){
        return true;
    }
 }
+bool noStopLine(){
     //return true is no stop line
     //false if on stop line
 }
 
 int main(void) {
-	//#region config_init
-	visionMain.setBrightness(55);
-	visionMain.setSignature(sig_TARGET);
-	//#endregion config_init
-
+	
 	pickUp();
-	turn(180);
-	while(noStopSign() && noStopLine){
+ 	turnLeft(25, -180*2.7);
+ 	moveForwards(20, backupdist);
+	while(noStopSign() /*&& noStopLine()*/){
 	    lineTrack();
 	}
-	dropOff();				
+// 	dropOff();				
 
-    goToGoal();
+//     goToGoal();
 }
