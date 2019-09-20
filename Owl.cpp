@@ -15,7 +15,8 @@ vex::motor             motorArm(vex::PORT8, vex::gearSetting::ratio18_1, false);
 vex::vision            visionMain(vex::PORT12);
 vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
 //#endregion config_globals
-
+float min_dis = 5.0;
+float max_dis = 20.0;
 const double kC = 2048.0;
 const double pC = 1.8;
 const double kP = 85;
@@ -161,10 +162,16 @@ void goToGoal(){
 }
 
 bool noStopSign(){
-    //return true is noStopSign
-    //false if 5-20inches from stopSign
+    float sensorValue = mainSonar.distance(distanceUnits::in);
+
+   if((max_dis > sensorValue) and (min_dis < sensorValue))
+   {
+       return false;
+   }
+   else{ //outside 5-20in
+       return true;
+   }
 }
-bool noStopLine(){
     //return true is no stop line
     //false if on stop line
 }
