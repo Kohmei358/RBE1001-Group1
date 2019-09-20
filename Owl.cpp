@@ -152,11 +152,11 @@ bool noStopSign(){
 bool noStopLine(){
     int Lreading = leftLight.value(percentUnits::pct);
     int Rreading = rightLight.value(percentUnits::pct);
-    if((Lreading < light_threshold) and (Rreading < light_threshold)){
-        return true;
+    if((Lreading > light_threshold) and (Rreading > light_threshold)){
+        return false;
     }
     else{
-        return false;
+        return true;
     }
 }
 }
