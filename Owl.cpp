@@ -167,10 +167,15 @@ bool noStopSign(){
    }
 }
 bool noStopLine(){
-    //return true is no stop line
-    //false if on stop line
+    int Lreading = leftLight.value(percentUnits::pct);
+    int Rreading = rightLight.value(percentUnits::pct);
+    if((Lreading > light_threshold) and (Rreading > light_threshold)){
+        return false;
+    }
+    else{
+        return true;
+    }
 }
-
 int main(void) {
 	pickUp();
  	turnLeft(25, -180*2.7);
