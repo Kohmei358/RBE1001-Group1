@@ -5,20 +5,22 @@ using namespace vex;
 
 double kP = 0.06;
 double kI = 0.00001;
+double kP2 = 0.3;
+double kI2 = 0.001;
 
 
 //#region config_globals
-vex::brain  Brain;
-vex::motor  motorLeft(vex::PORT1, vex::gearSetting::ratio18_1, true);
-vex::motor  motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false);
-vex::motor  motorArm(vex::PORT8, vex::gearSetting::ratio18_1, false);
-vex::vision visionMain(vex::PORT12);
+vex::brain             Brain;
+vex::motor             motorLeft(vex::PORT1, vex::gearSetting::ratio18_1, true);
+vex::motor             motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false);
+vex::motor             motorArm(vex::PORT8, vex::gearSetting::ratio18_1, false);
+vex::vision            visionMain(vex::PORT12);
+vex::vision::signature sig_TARGET(1,1919,2435,2177,-5051,-4779,-4915,3,0);
 vex::sonar  mainSonar(Brain.ThreeWirePort.A);
 vex::line   rightLight(Brain.ThreeWirePort.D);
 vex::line   leftLight(Brain.ThreeWirePort.E);
 vex::bumper limitMain(Brain.ThreeWirePort.F);
 //#endregion config_globals
-vex::vision::signature sig_TARGET(1,293,585,439,-3999,-3717,-3858,3,0);
 float min_dis = 5.0;
 float max_dis = 20.0;
 const double kC = 2048.0;
@@ -96,8 +98,8 @@ void lineTrack(){
     intergralError += error;
     derivativeError = prevError-error;
     Brain.Screen.printLine(1,"Intgreal: %f     D: %f",intergralError,derivativeError);
-    if(Brain.Timer.time(timeUnits::sec) > 4){
-        kP = 0.06;
+    if(Brain.Timer.time(timeUnits::sec) > 3){
+        kP = 0.05;
         motorLeft.spin(directionType::rev,2.1-error-intergralError*kI,voltageUnits::volt);
         motorRight.spin(directionType::rev,2.1+error+intergralError*kI,voltageUnits::volt);
     }else{
@@ -125,8 +127,8 @@ double alignGoalTo(int xTarget){
             error = (xTarget - visionMain.largestObject.centerX)/10;
             totalError += error;
             Brain.Screen.printLine(10,"E: %f, TE: %f",error,totalError);
-            motorLeft.spin(directionType::fwd,error*kP+totalError*kI,percentUnits::pct);
-            motorRight.spin(directionType::rev,error*kP+totalError*kI,percentUnits::pct);
+            motorLeft.spin(directionType::fwd,error*kP2+totalError*kI2,percentUnits::pct);
+            motorRight.spin(directionType::rev,error*kP2+totalError*kI2,percentUnits::pct);
         }else{
             Brain.Screen.printLine(10,"No Data");
             //totalError = 0;
@@ -135,29 +137,30 @@ double alignGoalTo(int xTarget){
         sleepMs(10);
     }
     stop();
-    double angleMoved = abs((motorLeft.rotation(rotationUnits::deg)-motorRight.rotation(rotationUnits::deg))/(2));
+    double angleMoved = (motorLeft.rotation(rotationUnits::deg)-motorRight.rotation(rotationUnits::deg))/(2);
+    turnLeft(5,-0.2*angleMoved);
+    angleMoved = (motorLeft.rotation(rotationUnits::deg)-motorRight.rotation(rotationUnits::deg))/(2);
     return angleMoved;
 }
 
 void goToGoal(){
     Brain.Screen.printLine(8,"GoToGoal");
-    double rot = alignGoalTo(160);
+    double rot = alignGoalTo(130);
     Brain.Screen.printLine(1,"Rot: %f", rot);
     double angle = (rot/6);
     Brain.Screen.printLine(2,"Ang: %f",angle);
     double cose = cos(degToRad(angle));
     Brain.Screen.printLine(3,"Cos: %f",cose);
     Brain.Screen.printLine(4,"Done");
-    sleepMs(100000);
-    moveForwards(30,300.0/cose);
-    alignGoalTo(130);
+    moveForwards(30,500.0/cose);
+    turnLeft(10,rot);
     moveForwards(50,250);
 }
 
 bool noStopSign(){
     float sensorValue = mainSonar.distance(distanceUnits::in);
     Brain.Screen.printLine(3,"Distance: %f",sensorValue);
-    if(30 > sensorValue && 2 < sensorValue)
+    if(20 > sensorValue && 2 < sensorValue)
     {
        return false;
     }
@@ -166,7 +169,7 @@ bool noStopSign(){
     }
 }
 bool noStopLine(){
-    Brain.Screen.printLine(3,"L: %f R: %f",leftLight.value(percentUnits::pct) ,rightLight.value(percentUnits::pct));
+    //Brain.Screen.printLine(3,"L: %f R: %f",leftLight.value(percentUnits::pct) ,rightLight.value(percentUnits::pct));
     if(leftLight.value(percentUnits::pct) > 30 && rightLight.value(percentUnits::pct) > 30){
         return false;
     }
@@ -176,11 +179,18 @@ bool noStopLine(){
 }
 
 int main(void) {
-// 	pickUp();
-//  	turnLeft(25, -180*2.7);
-//  	moveForwards(20, backupdist);
-
-
+	//#region config_init
+	visionMain.setBrightness(55);
+	visionMain.setSignature(sig_TARGET);
+	//#endregion config_init
+	
+	pickUp();
+ 	turnLeft(25, -180*2.95);
+ 	sleepMs(350);
+ 	moveForwards(20, -300);
+    stop();
+    sleepMs(200);
+    
  	//line track
  	Brain.Timer.clear();
 	while(noStopSign()){
@@ -190,17 +200,26 @@ int main(void) {
     Brain.Screen.clearScreen();
     stop();
     sleepMs(1000);
-    while(mainSonar.distance(distanceUnits::in) < 10){
+    intergralError = 0;
+    double sonarVal = mainSonar.distance(distanceUnits::in);
+    while(sonarVal < 23 && sonarVal > 2){
         sleepMs(20);
+        sonarVal = mainSonar.distance(distanceUnits::in);
     }
     Brain.Screen.clearScreen();
-    while(noStopLine){
+    while(leftLight.value(percentUnits::pct) < 30 || rightLight.value(percentUnits::pct) < 30){
         Brain.Screen.printLine(3,"L: %f R: %f",leftLight.value(percentUnits::pct) ,rightLight.value(percentUnits::pct));
         lineTrack();
-        sleepMs(5);
+        sleepMs(10);
     }
+    stop();
+    turnLeft(20,90*2.7);
+    sleepMs(350);
+    moveForwards(-20,-170);
+    motorArm.rotateTo(resetAngle, rotationUnits::deg, 100, velocityUnits::pct);
+    moveForwards(20,170);
     
-// 	dropOff();				
-
-//     goToGoal();
+	dropOff();				
+    goToGoal();
+    
 }
