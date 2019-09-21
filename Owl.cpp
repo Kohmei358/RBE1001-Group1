@@ -3,8 +3,8 @@
 #include "math.h"
 using namespace vex;
 
-const double kP = 5;
-const double kI = 0;
+double kP = 0.06;
+double kI = 0.00001;
 
 
 //#region config_globals
@@ -34,7 +34,8 @@ const int wheelRad = 2;
 double e;
 const int resetAngle = -930;
 const int backupdist = -80;
-double intergral = 0;
+double derivativeError = 0;
+double intergralError = 0;
 double prevError = 0;
 double error = 0;
 double steering = 0;
@@ -89,22 +90,21 @@ double map(double darkVolts,double lightVolts , double darkPct, double lightPct,
 }
 
 void lineTrack(){
-    if(Brain.Timer.time(timeUnits::sec) > 3){
-            Brain.Timer.clear();
-            intergral = 0;
-        }        
-        error = map(0,1,58,3,leftLight.value(percentUnits::pct)) - map(0,1,63,3,rightLight.value(percentUnits::pct));
-        //error = error*0.1;
-        Brain.Screen.printLine(1,"Error: %f, Steering: %f",error,steering);
-        Brain.Screen.printLine(2,"T: %f",Brain.Timer.time(timeUnits::sec));
-        
-        intergral += error * timeConst;
-        double derivative = (error-prevError)/timeConst;
-        steering = kP*error + kI*intergral + kD*derivative;
-        prevError = error;
-        sleepMs(10);
-        motorLeft.spin(directionType::rev,2.4+steering,voltageUnits::volt);
-        motorRight.spin(directionType::rev,2.4-steering,voltageUnits::volt);
+    prevError = error;
+    error = (32-rightLight.value(percentUnits::pct))*kP;
+    error = error*error*error;
+    intergralError += error;
+    derivativeError = prevError-error;
+    Brain.Screen.printLine(1,"Intgreal: %f     D: %f",intergralError,derivativeError);
+    if(Brain.Timer.time(timeUnits::sec) > 5){
+        kP = 0.06;
+        motorLeft.spin(directionType::rev,2.1-error-intergralError*kI,voltageUnits::volt);
+        motorRight.spin(directionType::rev,2.1+error+intergralError*kI,voltageUnits::volt);
+    }else{
+        motorLeft.spin(directionType::rev,4.1-error-intergralError*kI,voltageUnits::volt);
+        motorRight.spin(directionType::rev,4.1+error+intergralError*kI,voltageUnits::volt);
+    }
+    
 }
 void dropOff(){
     //90 deg point turn
@@ -156,8 +156,8 @@ void goToGoal(){
 
 bool noStopSign(){
     float sensorValue = mainSonar.distance(distanceUnits::in);
-
-   if((max_dis > sensorValue) and (min_dis < sensorValue))
+    Brain.Screen.printLine(3,"Distance: %f",sensorValue);
+   if(30 > sensorValue && 10 < sensorValue)
    {
        return false;
    }
@@ -177,14 +177,19 @@ int main(void) {
 
 
  	//line track
-	while(noStopSign() && noStopLine()){
+ 	Brain.Timer.clear();
+	while(noStopSign()){
         lineTrack();
+        sleepMs(5);
     }
+    Brain.Screen.clearScreen();
     stop();
+    sleepMs(100000);
     while(!noStopSign){
     }
     while(noStopLine){
         lineTrack();
+        sleepMs(5);
     }
     
 // 	dropOff();				
