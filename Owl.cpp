@@ -96,7 +96,7 @@ void lineTrack(){
     intergralError += error;
     derivativeError = prevError-error;
     Brain.Screen.printLine(1,"Intgreal: %f     D: %f",intergralError,derivativeError);
-    if(Brain.Timer.time(timeUnits::sec) > 5){
+    if(Brain.Timer.time(timeUnits::sec) > 4){
         kP = 0.06;
         motorLeft.spin(directionType::rev,2.1-error-intergralError*kI,voltageUnits::volt);
         motorRight.spin(directionType::rev,2.1+error+intergralError*kI,voltageUnits::volt);
@@ -157,17 +157,22 @@ void goToGoal(){
 bool noStopSign(){
     float sensorValue = mainSonar.distance(distanceUnits::in);
     Brain.Screen.printLine(3,"Distance: %f",sensorValue);
-   if(30 > sensorValue && 10 < sensorValue)
-   {
+    if(30 > sensorValue && 2 < sensorValue)
+    {
        return false;
-   }
-   else{ //outside 5-20in
+    }
+    else{ //outside 5-20in
        return true;
-   }
+    }
 }
 bool noStopLine(){
-    //return true is no stop line
-    //false if on stop line
+    Brain.Screen.printLine(3,"L: %f R: %f",leftLight.value(percentUnits::pct) ,rightLight.value(percentUnits::pct));
+    if(leftLight.value(percentUnits::pct) > 30 && rightLight.value(percentUnits::pct) > 30){
+        return false;
+    }
+    else{
+        return true;
+    }
 }
 
 int main(void) {
@@ -184,10 +189,13 @@ int main(void) {
     }
     Brain.Screen.clearScreen();
     stop();
-    sleepMs(100000);
-    while(!noStopSign){
+    sleepMs(1000);
+    while(mainSonar.distance(distanceUnits::in) < 10){
+        sleepMs(20);
     }
+    Brain.Screen.clearScreen();
     while(noStopLine){
+        Brain.Screen.printLine(3,"L: %f R: %f",leftLight.value(percentUnits::pct) ,rightLight.value(percentUnits::pct));
         lineTrack();
         sleepMs(5);
     }
