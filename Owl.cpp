@@ -15,7 +15,7 @@ vex::motor             motorLeft(vex::PORT1, vex::gearSetting::ratio18_1, true);
 vex::motor             motorRight(vex::PORT2, vex::gearSetting::ratio18_1, false);
 vex::motor             motorArm(vex::PORT8, vex::gearSetting::ratio18_1, false);
 vex::vision            visionMain(vex::PORT12);
-vex::vision::signature sig_TARGET(1,1919,2435,2177,-5051,-4779,-4915,3,0);
+vex::vision::signature sig_TARGET(1,-307,-127,-217,-3539,-3317,-3428,3,0);
 vex::sonar  mainSonar(Brain.ThreeWirePort.A);
 vex::line   rightLight(Brain.ThreeWirePort.D);
 vex::line   leftLight(Brain.ThreeWirePort.E);
